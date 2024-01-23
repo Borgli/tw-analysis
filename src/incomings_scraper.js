@@ -1,9 +1,13 @@
 /*
 	* Scrape incomings in csv format from the incomings page: mode=incomings&subtype=attacks
 */
+if (!document.URL.includes("mode=incomings&subtype=attacks")) {
+	alert("Run this script on the incomings > attacks page")
+	throw new Error("Wrong page")
+}
 
 const re_speed = /([^\/]+)$/
-const re_coord = /\d{1,3}\|\d{1,3}/;
+const re_coord = /\d{1,3}\|\d{1,3}/
 
 let data = ""
 
