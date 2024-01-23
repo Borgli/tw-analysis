@@ -3,7 +3,9 @@ const re_coord = /\d{1,3}\|\d{1,3}/;
 
 let data = "";
 
-$("#incomings_table > tbody > tr:nth-child(1)").append("<th>Sent Time</th>").attr("width", "*");
+$("#incomings_table > tbody > tr:nth-child(1)").append("<th><a href='#'>Sent Time</a></th>").attr("width", "*");
+$("#incomings_table tbody tr:last-child th:nth-child(2)").attr("colspan", 7)
+
 
 function parseArrivalTime(timeStr) {
     const now = new Date();
@@ -23,6 +25,12 @@ function parseArrivalTime(timeStr) {
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
         return new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), ...timePart.split(':').map(Number));
+
+    } else if (timeStr.startsWith('yesterday')) {
+        // Format: "yesterday at 00:13:49:464"
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), ...timePart.split(':').map(Number));
     } else {
         // Unsupported format
         return null;
@@ -57,6 +65,30 @@ function subtractMinutes(date, minutes) {
     const milliseconds = minutes * 60 * 1000; // Convert minutes to milliseconds
     return new Date(date.getTime() - milliseconds);
 }
+
+// Function to sort the table rows based on the Sent Time, excluding the first and last rows
+function sortTableBySentTime(ascending = true) {
+    const $tbody = $("#incomings_table tbody");
+    // Select all rows except the first and last
+    const $rows = $tbody.find("tr.nowrap");
+    const $bottom = $tbody.find("tr:last-child")
+
+    $rows.sort((a, b) => {
+        const timeA = parseArrivalTime($(a).find("td:last-child").text());
+        const timeB = parseArrivalTime($(b).find("td:last-child").text());
+        return ascending ? timeA - timeB : timeB - timeA;
+    }).appendTo($tbody); // Append the sorted rows back to the table body
+
+    $bottom.appendTo($tbody);
+
+}
+
+// Add click event listener to the Sent Time header
+let isAscending = true;
+$("#incomings_table th:last-child").on('click', () => {
+    sortTableBySentTime(isAscending);
+    isAscending = !isAscending; // Toggle the sorting order for next click
+});
 
 const speeds = {
     "ram": 30,
