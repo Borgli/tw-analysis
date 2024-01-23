@@ -1,6 +1,8 @@
 /*
 	* Scrape incomings in csv format from the incomings page: mode=incomings&subtype=attacks
 */
+
+<<<<<<<<< Temporary merge branch 1
 if (!document.URL.includes("mode=incomings&subtype=attacks")) {
 	alert("Run this script on the incomings > attacks page")
 	throw new Error("Wrong page")
