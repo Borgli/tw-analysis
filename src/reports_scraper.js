@@ -2,7 +2,10 @@
 	* Scrape reports in csv format from the reports (defense) page: screen=report&mode=defense
 */
 
-// TODO: verify we're on the correct page!
+if (!document.URL.includes("screen=report&mode=defense")) {
+	alert("Run this script on the reports > defenses page")
+	throw new Error("Wrong page")
+}
 
 const re_speed = /([^\/]+)$/
 const re_coord = /\d{3}\|\d{3}/g
