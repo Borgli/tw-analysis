@@ -11,16 +11,16 @@ let data = ""
 
 $("#report_list > tbody > tr").not(":first").not(":last").each(
 	(i, row) => {
-		console.log(row)
 		let description = $(row).find("td:eq(1) .quickedit-label").text()
 		let attacker = description.split('(')[0].trim()
 		let coords = description.match(re_coord)
 		let origin = coords[0]
 		let destination = coords[1]
 		let arrival_time = $(row).find("td:eq(2)").text() // TODO: parse date, since this includes a comma (doesnt work well with csv...)
+		let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small")
 		// TODO: calculate distance or let it be implied by origin-destination?
-		data += `${attacker},${origin},${destination},${arrival_time}\n`
-		//console.log(`attacker: ${attacker}, origin: ${origin}, destination: ${destination}, arrival time: ${arrival_time}`)
+		data += `${attacker},${origin},${destination},${arrival_time},${is_fake}\n`
+		//console.log(`attacker: ${attacker}, origin: ${origin}, destination: ${destination}, arrival time: ${arrival_time}, is fake: ${is_fake}`)
 	}
 )
 
