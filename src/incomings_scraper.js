@@ -3,7 +3,7 @@
 */
 
 const re_speed = /([^\/]+)$/
-const re_coord = /\d{3}\|\d{3}/
+const re_coord = /\d{1,3}\|\d{1,3}/;
 
 let data = ""
 
