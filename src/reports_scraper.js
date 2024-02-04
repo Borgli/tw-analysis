@@ -7,8 +7,11 @@ if (!document.URL.includes("screen=report&mode=defense")) {
 	throw new Error("Wrong page")
 }
 
-const re_speed = /([^\/]+)$/
-const re_coord = /\d{3}\|\d{3}/g
+const re_speed = /-\s\((\w+)/
+const re_coord = /\d{1,3}\|\d{1,3}/g
+const re_distance = /distance ([\d.]+)/
+const re_sent = /sent\s+([A-Za-z]+\s+\d{2},\s+\d{2}:\d{2}:\d{2})/
+const re_arrival = /arrival\s+([A-Za-z]+\s+\d{2},\s+\d{2}:\d{2}:\d{2})/
 
 let data = ""
 
@@ -18,12 +21,26 @@ $("#report_list > tbody > tr").not(":first").not(":last").each(
 		let attacker = description.split('(')[0].trim()
 		let coords = description.match(re_coord)
 		let origin = coords[0]
-		let destination = coords[1]
-		let arrival_time = $(row).find("td:eq(2)").text() // TODO: parse date, since this includes a comma (doesnt work well with csv...)
+		let target = coords[1]
+		let speed = description.match(re_speed)[1].toLowerCase()
+		let distance = description.match(re_distance)
+		if (distance) {
+			distance = distance[1]
+		}
+		let sent_time = description.match(re_sent)
+		if (sent_time) {
+			sent_time = sent_time[1]
+		}
+		let arrival_time = description.match(re_arrival)
+		if (arrival_time) {
+			arrival_time = arrival_time[1]
+		} else {
+			arrival_time = $(row).find("td:eq(2)").text()
+		}
 		let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small")
 		// TODO: calculate distance or let it be implied by origin-destination?
-		data += `${attacker},${origin},${destination},${arrival_time},${is_fake}\n`
-		//console.log(`attacker: ${attacker}, origin: ${origin}, destination: ${destination}, arrival time: ${arrival_time}, is fake: ${is_fake}`)
+		data += `${attacker},${origin},${target},${arrival_time},${sent_time},${speed},${distance},${is_fake}\n`
+		console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, sent time: ${sent_time}, speed: ${speed}, distance: ${distance}, is fake: ${is_fake}`)
 	}
 )
 
