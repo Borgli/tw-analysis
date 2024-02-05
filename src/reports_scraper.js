@@ -15,6 +15,19 @@ const re_arrival = /arrival\s+([A-Za-z]+\s+\d{2},\s+\d{2}:\d{2}:\d{2})/
 
 let data = ""
 
+function parseDate(dateStr) {
+	let current_date = new Date();
+	let parsed_date = new Date(dateStr);
+	// datestr is in UTC, but date is in local, so we need to adjust for timezone
+	parsed_date.setMinutes(parsed_date.getMinutes() - parsed_date.getTimezoneOffset())
+
+	if (parsed_date < current_date) {
+		parsed_date.setFullYear(current_date.getFullYear())
+	}
+	// ISO-string prints it as UTC
+    return parsed_date.toISOString();
+}
+
 $("#report_list > tbody > tr").not(":first").not(":last").each(
 	(i, row) => {
 		let description = $(row).find("td:eq(1) .quickedit-label").text()
@@ -29,13 +42,13 @@ $("#report_list > tbody > tr").not(":first").not(":last").each(
 		}
 		let sent_time = description.match(re_sent)
 		if (sent_time) {
-			sent_time = sent_time[1]
+			sent_time = parseDate(sent_time[1])
 		}
 		let arrival_time = description.match(re_arrival)
 		if (arrival_time) {
-			arrival_time = arrival_time[1]
+			arrival_time = parseDate(arrival_time[1])
 		} else {
-			arrival_time = $(row).find("td:eq(2)").text()
+			arrival_time = parseDate($(row).find("td:eq(2)").text())
 		}
 		let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small")
 		// TODO: calculate distance or let it be implied by origin-destination?

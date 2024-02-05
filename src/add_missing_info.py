@@ -9,14 +9,14 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 
-CSV_FILE_PATH = Path("../data/reports/data.csv")
+CSV_FILE_PATH = Path("../data/reports/data (13).csv")
 
 speeds = {
     "ram": 30,
     "axe": 18,
     "spy": 8,
-    "light": 10,
-    "heavy": 11,
+    "lcav": 10,
+    "hcav": 11,
     "sword": 22,
     "noble": 35
 }
@@ -35,9 +35,9 @@ def calculate_distance(origin, target):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='If missing distance or sent_time or arrival_time in the labeling of '
+    arg_parser = argparse.ArgumentParser(description='If missing distance or sent_time or arrival_time in the labeling of '
                                                  'the report, this script will try to add missing data.')
-    parser.add_argument('--csv-file', type=str, default=CSV_FILE_PATH)
+    arg_parser.add_argument('--csv-file', type=str, default=CSV_FILE_PATH)
 
     reports = pd.read_csv(CSV_FILE_PATH,
                           names=["player", "origin", "target", "arrival_time", "sent_time", "speed", "distance",
