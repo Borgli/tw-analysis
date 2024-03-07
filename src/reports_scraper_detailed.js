@@ -49,46 +49,71 @@ function delay(time) {
 }
 
 async function getInfoForEachReport() {
-	const rows = $("#report_list > tbody > tr").not(":first").not(":last").get();
-	for (let i = 0; i < rows.length; i++) {
-		console.log(`Processing ${i+1} of ${rows.length}`)
-		const row = rows[i];
-		let description = $(row).find("td:eq(1) .quickedit-label").text()
-		let attacker = description.split('(')[0].trim()
-		let coords = description.match(re_coord)
-		let origin = coords[0]
-		let target = coords[1]
-		let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small")
+	// Check if pagination:
+	const $pagination = $("#content_value > table > tbody > tr > td:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(2)").get();
+	const pageList = []
+	pageList.push($('html'))
+	let numberOfRows = $("#report_list > tbody > tr").not(":first").not(":last").get().length
+	if (!$($pagination).attr('class')) {
+		// Pagination exists because class attribute is not set
+		const pages = $($pagination).find('td > a').get()
+		for (let i = 0; i < pages.length; i++) {
+			await new Promise(resolve => {
+				$.get($(pages).attr('href'), (data) => {
+					pageList.push($(data))
+					numberOfRows += $(data).find("#report_list > tbody > tr").not(":first").not(":last").get().length
+				}).then(() => {
+					resolve()
+				})
+			})
+			await delay(200);
+		}
+	}
 
-		let speed = 0;
-		let arrival_time;
-		await new Promise(resolve => {
-			$.get($(row).find("td:nth-child(2) > span.quickedit.report-title > span > a.report-link").attr("href"), (data) => {
-				const $report = $(data);
-				let $arrival_time = $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(2)")
-				arrival_time = $arrival_time.text().trim()
-				arrival_time = parseDate(arrival_time)
-				let attackers = []
-				$report.find("#attack_info_att_units > tbody > tr:nth-child(2) > td.unit-item").each(
-					(i, row) => {
-						attackers.push(parseInt($(row).text()))
+	console.log(pageList)
+
+	for (let pageNum = 1; pageNum < pageList.length; pageNum++) {
+		const rows = $(pageList[pageNum]).find("#report_list > tbody > tr").not(":first").not(":last").get();
+		for (let i = 0; i < rows.length; i++) {
+			console.log(`Processing ${i+1} of ${numberOfRows}`)
+			const row = rows[i];
+			let description = $(row).find("td:eq(1) .quickedit-label").text()
+			let attacker = description.split('(')[0].trim()
+			let coords = description.match(re_coord)
+			let origin = coords[0]
+			let target = coords[1]
+			let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small")
+
+			let speed = 0;
+			let arrival_time;
+			await new Promise(resolve => {
+				$.get($(row).find("td:nth-child(2) > span.quickedit.report-title > span > a.report-link").attr("href"), (data) => {
+					const $report = $(data);
+					let $arrival_time = $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(2)")
+					arrival_time = $arrival_time.text().trim()
+					arrival_time = parseDate(arrival_time)
+					let attackers = []
+					$report.find("#attack_info_att_units > tbody > tr:nth-child(2) > td.unit-item").each(
+						(i, row) => {
+							attackers.push(parseInt($(row).text()))
+						}
+					)
+					// Check if fang
+					if (is_fake && attackers[9] > 50) {
+						is_fake = false;
+					}
+					speed = findSpeed(attackers);
+					//console.log($report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(1) > th:nth-child(2) > span > span > span").text())
+				}).then(() => {
+						data += `${attacker},${origin},${target},${arrival_time},${speed},${is_fake}\n`
+						console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, speed: ${speed}, is fake: ${is_fake}`)
+						resolve();
 					}
 				)
-				// Check if fang
-				if (is_fake && attackers[9] > 50) {
-					is_fake = false;
-				}
-				speed = findSpeed(attackers);
-				//console.log($report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(1) > th:nth-child(2) > span > span > span").text())
-			}).then(() => {
-					data += `${attacker},${origin},${target},${arrival_time},${speed},${is_fake}\n`
-					console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, speed: ${speed}, is fake: ${is_fake}`)
-					resolve();
-				}
-			)
-		})
+			})
 
-		await delay(500);
+			await delay(200);
+		}
 	}
 }
 

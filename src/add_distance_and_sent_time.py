@@ -41,8 +41,8 @@ if __name__ == '__main__':
         journey_time_minutes = report["distance"] * int(report["speed"])
         report["sent_time"] = (arrival_time - timedelta(minutes=journey_time_minutes)).isoformat()
         updated_reports.append(report)
-        time.sleep(0.5)
+        time.sleep(0.1)
 
     updated_reports = pd.DataFrame(updated_reports)
     updated_reports = updated_reports.reindex(columns=['attacker', 'origin', 'target', 'arrival_time', 'sent_time', 'distance', 'speed', 'fake'])
-    updated_reports.to_csv("reports_fixed.csv", index=False)
+    updated_reports.to_csv(f"reports_{len(reports)}.csv", index=False)
