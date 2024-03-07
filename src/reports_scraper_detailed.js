@@ -49,6 +49,8 @@ function delay(time) {
   return new Promise(resolve => setTimeout(resolve, time));
 }
 
+const average = arr => arr.reduce( ( p, c ) => p + c, 0 ) / arr.length;
+
 async function getInfoForEachReport() {
 	// Check if pagination:
 	const $pagination = $("#content_value > table > tbody > tr > td:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(2)").get();
@@ -72,18 +74,23 @@ async function getInfoForEachReport() {
 	}
 
 	console.log(pageList)
-
+    let averageTime = []
+	let totalStartTime = performance.now(); let totalEndTime = 0;
+    let startTime = 0; let endTime = 0;
+    let rowNumber = 1
 	for (let pageNum = 0; pageNum < pageList.length; pageNum++) {
 		const rows = $(pageList[pageNum]).find("#report_list > tbody > tr").not(":first").not(":last").get();
 		for (let i = 0; i < rows.length; i++) {
-			console.log(`Processing ${i+1} of ${numberOfRows}`)
-			const row = rows[i];
-			let description = $(row).find("td:eq(1) .quickedit-label").text()
-			let attacker = description.split('(')[0].trim()
-			let coords = description.match(re_coord)
-			let origin = coords[0]
-			let target = coords[1]
-			let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small")
+            console.log(`Processing ${rowNumber} of ${numberOfRows} | Time left: ${(averageTime.length > 0) ? ((numberOfRows - (rowNumber)) * average(averageTime)).toFixed(0) : ((numberOfRows - (rowNumber)) * 0.2).toFixed(0)} seconds`)
+            rowNumber += 1
+            startTime = performance.now()
+            const row = rows[i];
+            let description = $(row).find("td:eq(1) .quickedit-label").text()
+            let attacker = description.split('(')[0].trim()
+            let coords = description.match(re_coord)
+            let origin = coords[0]
+            let target = coords[1]
+            let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small")
 
             let speed = 0;
             let arrival_time;
@@ -144,19 +151,19 @@ async function getInfoForEachReport() {
                     }
 
                     let luck;
-                    $report.find('#attack_luck > tbody > tr').each(function() {
-                            // Try to find a <b> tag in the first <td> (for the misfortune case)
-                            let percentageFirst = $(this).find('td:first-child b').text().trim();
+                    $report.find('#attack_luck > tbody > tr').each(function () {
+                        // Try to find a <b> tag in the first <td> (for the misfortune case)
+                        let percentageFirst = $(this).find('td:first-child b').text().trim();
 
-                            // Try to find a <b> tag in the last <td> (for the luck case)
-                            let percentageLast = $(this).find('td:last-child b').text().trim();
+                        // Try to find a <b> tag in the last <td> (for the luck case)
+                        let percentageLast = $(this).find('td:last-child b').text().trim();
 
-                            // Check which one contains a value and log it
-                            if(percentageFirst) {
-                                    luck = percentageFirst
-                            } else if (percentageLast) {
-                                    luck = percentageLast
-                            }
+                        // Check which one contains a value and log it
+                        if (percentageFirst) {
+                            luck = percentageFirst
+                        } else if (percentageLast) {
+                            luck = percentageLast
+                        }
                     });
 
                     // Get special data
@@ -246,7 +253,11 @@ async function getInfoForEachReport() {
             })
 
             await delay(200);
+            endTime = performance.now()
+            averageTime.push((endTime - startTime) / 1000)
         }
+        totalEndTime = performance.now()
+        console.log(`Total time: ${((totalEndTime - totalStartTime) / 1000).toFixed(0)} seconds`)
 	}
 }
 
