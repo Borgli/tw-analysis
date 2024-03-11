@@ -10,7 +10,15 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 
-CSV_FILE_PATH = Path("../data/reports/data_detailed.csv")
+CSV_FILE_PATH = Path("reports.csv")
+
+IS_REPORTS = True
+if IS_REPORTS:
+    filename = "reports"
+    column_names = ['attacker', 'origin', 'target', 'arrival_time', 'sent_time', 'distance', 'speed', 'fake']
+else:
+    filename = "incomings"
+    column_names = ['attacker', 'origin', 'target', 'arrival_time', 'sent_time', 'distance', 'speed']
 
 def calculate_distance(origin, target):
     url = f"https://www.twstats.com/en133/ajax.php?mode=dcalc&o={origin}&t={target}"
@@ -44,5 +52,5 @@ if __name__ == '__main__':
         time.sleep(0.1)
 
     updated_reports = pd.DataFrame(updated_reports)
-    updated_reports = updated_reports.reindex(columns=['attacker', 'origin', 'target', 'arrival_time', 'sent_time', 'distance', 'speed', 'fake'])
-    updated_reports.to_csv(f"reports_{len(reports)}.csv", index=False)
+    updated_reports = updated_reports.reindex(columns=column_names)
+    updated_reports.to_csv(f"{filename}_{len(reports)}.csv", index=False)
