@@ -5,6 +5,11 @@ if (!(game_data.screen === 'overview_villages' && document.location.search.inclu
 	throw new Error("Wrong page");
 }
 
+if ($("#incomings_table > tbody > tr:nth-child(1)").text().includes("Sent time")) {
+    UI.InfoMessage('Sent time script already running.', 3000, 'error');
+    throw new Error("Script already running");
+}
+
 const re_speed = /([^\/]+)$/;
 const speeds = {
   "spear": 18,
@@ -21,7 +26,7 @@ const speeds = {
   "snob": 35
 };
 
-$("#incomings_table > tbody > tr:nth-child(1)").append("<th><a href='#'>Sent Time</a></th>").attr("width", "*");
+$("#incomings_table > tbody > tr:nth-child(1)").append("<th><a href='#'>Sent time</a></th>").attr("width", "*");
 $("#incomings_table tbody tr:last-child th:nth-child(2)").attr("colspan", 7);
 
 function parseArrivalTime(timeStr) {
@@ -167,5 +172,9 @@ $("#incomings_table tbody tr.nowrap").each((i, row) => {
     const distance = parseFloat(distanceStr);
     const arrival_time = $(row).find("td:eq(5)").text().trim();
     const adjustedTime = subtractMinutes(parseArrivalTime(arrival_time), speeds[speed]*distance);
-    $(row).append(`<td>${formatDate(adjustedTime)}</td>`);
+    if (speed !== "undefined") {
+        $(row).append(`<td>${formatDate(adjustedTime)}</td>`);
+    } else {
+        $(row).append(`<td>---invalid label---</td>`);
+    }
 });
