@@ -8,6 +8,11 @@ if (!(game_data.screen === 'report' && game_data.mode && game_data.mode === 'def
 	throw new Error("Wrong page");
 }
 
+if ($("#content_value > h2").text().includes("Scraping")) {
+    UI.InfoMessage('Report scraping script already running.', 3000, 'error');
+    throw new Error("Script already running");
+}
+
 const re_coord = /\d{1,3}\|\d{1,3}/g;
 
 let data = "attacker,origin,target,arrival_time,speed,fake\n";
