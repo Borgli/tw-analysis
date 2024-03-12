@@ -2,9 +2,10 @@
 	* Scrape incomings in csv format from the incomings page: mode=incomings&subtype=attacks
 */
 
-if (!document.URL.includes("mode=incomings&subtype=attacks")) {
-	alert("Run this script on the incomings > attacks page")
-	throw new Error("Wrong page")
+if (!(game_data.screen === 'overview_villages' && document.location.search.includes('mode=incomings') && document.location.search.includes('subtype=attacks'))) {
+	UI.InfoMessage('Going to incomings overview ...', 3000, 'success');
+	document.location = game_data.link_base_pure + 'overview_villages&mode=incomings&subtype=attacks';
+	throw new Error("Wrong page");
 }
 
 const re_speed = /([^\/]+)$/

@@ -1,5 +1,5 @@
 
-if (!(game_data.screen == 'place' && game_data.mode && game_data.mode.replace('#', '') == 'units')) {
+if (!(game_data.screen === 'place' && game_data.mode && game_data.mode.replace('#', '') === 'units')) {
 	UI.InfoMessage('Going to Rallypoint Troops overview ...', 3000, 'success');
 	document.location = game_data.link_base_pure + 'place&mode=units';
 	throw new Error("Wrong page");
@@ -62,10 +62,7 @@ function runScript() {
     $("#units_home > tbody > tr:nth-child(1) > th:nth-child(3)").attr('style', 'text-align:center');
     $("#units_home > tbody > tr:nth-child(1) > th:nth-child(2)").attr('class', 'selected');
 
-
-
     const topBar = $("#units_home > tbody > tr:nth-child(1) > th").get();
-
     for (let i = 1; i < topBar.length; i++) {
         if (i === 1) {
             $(topBar[i]).html("<a href='#'>Origin</a>");
