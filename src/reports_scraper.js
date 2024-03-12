@@ -9,14 +9,12 @@ if (!(game_data.screen === 'report' && game_data.mode && game_data.mode === 'def
 }
 
 if ($("#content_value > h2").text().includes("Scraping")) {
-    UI.InfoMessage('Report scraping script already running.', 3000, 'error');
-    throw new Error("Script already running");
+  UI.InfoMessage('Reports scraping script already running.', 3000, 'error');
+  throw new Error("Script already running");
+} else {
+  runScript();
+  UI.InfoMessage('Reports scraping script loaded.', 3000, 'success');
 }
-
-const re_coord = /\d{1,3}\|\d{1,3}/g;
-
-let data = "attacker,origin,target,arrival_time,speed,fake\n";
-let reports = [];
 
 function parseDate(dateStr) {
   let current_date = new Date();
@@ -31,22 +29,21 @@ function parseDate(dateStr) {
   return parsed_date.toISOString();
 }
 
-const speeds = {
-  "spear": 18,
-  "sword": 22,
-  "axe": 18,
-  "archer": 18,
-  "spy": 9,
-  "light": 10,
-  "marcher": 10,
-  "heavy": 11,
-  "ram": 30,
-  "catapult": 30,
-  "knight": 10,
-  "snob": 35
-};
-
 function findSpeed(attackers) {
+  const speeds = {
+    "spear": 18,
+    "sword": 22,
+    "axe": 18,
+    "archer": 18,
+    "spy": 9,
+    "light": 10,
+    "marcher": 10,
+    "heavy": 11,
+    "ram": 30,
+    "catapult": 30,
+    "knight": 10,
+    "snob": 35
+  };
   let activeAttackers = Object.values(speeds).filter((_, index) => attackers[index]);
   return activeAttackers.sort()[0];
 }
@@ -55,9 +52,9 @@ function delay(time) {
   return new Promise(resolve => setTimeout(resolve, time));
 }
 
-const average = arr => arr.reduce( ( p, c ) => p + c, 0 ) / arr.length;
+async function getInfoForEachReport(data, reports) {
+  const re_coord = /\d{1,3}\|\d{1,3}/g;
 
-async function getInfoForEachReport() {
   /* Check if pagination: */
   const $pagination = $("#content_value > table > tbody > tr > td:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(2)").get();
   const pageList = [];
@@ -94,6 +91,7 @@ async function getInfoForEachReport() {
 
   console.log(pageList);
 
+  const average = arr => arr.reduce( ( p, c ) => p + c, 0 ) / arr.length;
   let averageTime = [];
   let totalStartTime = performance.now(); let totalEndTime = 0;
   let startTime = 0; let endTime = 0;
@@ -295,8 +293,12 @@ function download(filename, text) {
   document.body.removeChild(element);
 }
 
-getInfoForEachReport().then(r => {
-  download("data.csv", data);
-  download("reports.json", JSON.stringify(reports));
-});
+function runScript() {
+  let data = "attacker,origin,target,arrival_time,speed,fake\n";
+  let reports = [];
 
+  getInfoForEachReport(data, reports).then(r => {
+    download("data.csv", data);
+    download("reports.json", JSON.stringify(reports));
+  });
+}

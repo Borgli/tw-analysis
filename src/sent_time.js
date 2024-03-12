@@ -8,26 +8,10 @@ if (!(game_data.screen === 'overview_villages' && document.location.search.inclu
 if ($("#incomings_table > tbody > tr:nth-child(1)").text().includes("Sent time")) {
     UI.InfoMessage('Sent time script already running.', 3000, 'error');
     throw new Error("Script already running");
+} else {
+    runScript();
+    UI.InfoMessage('Sent time script loaded.', 3000, 'success');
 }
-
-const re_speed = /([^\/]+)$/;
-const speeds = {
-  "spear": 18,
-  "sword": 22,
-  "axe": 18,
-  "archer": 18,
-  "spy": 9,
-  "light": 10,
-  "marcher": 10,
-  "heavy": 11,
-  "ram": 30,
-  "catapult": 30,
-  "knight": 10,
-  "snob": 35
-};
-
-$("#incomings_table > tbody > tr:nth-child(1)").append("<th><a href='#'>Sent time</a></th>").attr("width", "*");
-$("#incomings_table tbody tr:last-child th:nth-child(2)").attr("colspan", 7);
 
 function parseArrivalTime(timeStr) {
     const now = new Date();
@@ -121,60 +105,82 @@ function sortTableByColumn(columnIndex, ascending = true) {
     $bottom.appendTo($tbody);
 }
 
-let currentColumn = 5;
-let ascending = true;
-let descending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_s.png" class="" data-title="Distance">';
-let ascending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_n.png" class="" data-title="Distance">';
+function runScript() {
+    const re_speed = /([^\/]+)$/;
+    const speeds = {
+      "spear": 18,
+      "sword": 22,
+      "axe": 18,
+      "archer": 18,
+      "spy": 9,
+      "light": 10,
+      "marcher": 10,
+      "heavy": 11,
+      "ram": 30,
+      "catapult": 30,
+      "knight": 10,
+      "snob": 35
+    };
 
-$("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(6)").html('<a href="#">Arrives in ' + ascending_arrow + '</a>').attr('class', 'selected');
-$("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(7)").attr('class', 'selected');
+    $("#incomings_table > tbody > tr:nth-child(1)").append("<th><a href='#'>Sent time</a></th>").attr("width", "*");
+    $("#incomings_table tbody tr:last-child th:nth-child(2)").attr("colspan", 7);
 
-const topBar = $("#incomings_table > tbody > tr:nth-child(1) > th").get();
-for (let i = 1; i < topBar.length; i++) {
-    $(topBar[i]).find('a').attr('href', '#');
+    let currentColumn = 5;
+    let ascending = true;
+    let descending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_s.png" class="" data-title="Distance">';
+    let ascending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_n.png" class="" data-title="Distance">';
 
-    $(topBar[i]).on('click', (e) => {
-        e.preventDefault();
-        if (i === 6) {
-            i = 5;
-        }
-        if (i === currentColumn) {
-            ascending = !ascending;
-        } else {
-            $(topBar[currentColumn]).removeAttr('class');
-            let text = $(topBar[currentColumn]).find('a').text();
-            $(topBar[currentColumn]).empty().append($('<a href="#">').html(text));
-            if (currentColumn === 5) {
-                $(topBar[currentColumn + 1]).removeAttr('class');
+    $("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(6)").html('<a href="#">Arrives in ' + ascending_arrow + '</a>').attr('class', 'selected');
+    $("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(7)").attr('class', 'selected');
+
+    const topBar = $("#incomings_table > tbody > tr:nth-child(1) > th").get();
+    for (let i = 1; i < topBar.length; i++) {
+        $(topBar[i]).find('a').attr('href', '#');
+
+        $(topBar[i]).on('click', (e) => {
+            e.preventDefault();
+            if (i === 6) {
+                i = 5;
             }
-            currentColumn = i;
-            ascending = true;
-            $(topBar[currentColumn]).attr('class', 'selected');
-            if (currentColumn === 5) {
-                $(topBar[currentColumn + 1]).attr('class', 'selected');
+            if (i === currentColumn) {
+                ascending = !ascending;
+            } else {
+                $(topBar[currentColumn]).removeAttr('class');
+                let text = $(topBar[currentColumn]).find('a').text();
+                $(topBar[currentColumn]).empty().append($('<a href="#">').html(text));
+                if (currentColumn === 5) {
+                    $(topBar[currentColumn + 1]).removeAttr('class');
+                }
+                currentColumn = i;
+                ascending = true;
+                $(topBar[currentColumn]).attr('class', 'selected');
+                if (currentColumn === 5) {
+                    $(topBar[currentColumn + 1]).attr('class', 'selected');
+                }
             }
-        }
 
-        let text = $(topBar[i]).find('a').text();
-        if (ascending) {
-            $(topBar[i]).empty().append($('<a href="#">').html(text + " " + ascending_arrow));
+            let text = $(topBar[i]).find('a').text();
+            if (ascending) {
+                $(topBar[i]).empty().append($('<a href="#">').html(text + " " + ascending_arrow));
+            } else {
+                $(topBar[i]).empty().append($('<a href="#">').html(text + " " + descending_arrow));
+            }
+
+            sortTableByColumn(i, ascending);
+        });
+    }
+
+    $("#incomings_table tbody tr.nowrap").each((i, row) => {
+        const speed = re_speed.exec($(row).find("td:eq(0) img:eq(1)").attr("src"))[0].split('.')[0];
+        const distanceStr = $(row).find("td:eq(4)").text().trim();
+        const distance = parseFloat(distanceStr);
+        const arrival_time = $(row).find("td:eq(5)").text().trim();
+        const adjustedTime = subtractMinutes(parseArrivalTime(arrival_time), speeds[speed]*distance);
+        if (speed !== "undefined") {
+            $(row).append(`<td>${formatDate(adjustedTime)}</td>`);
         } else {
-            $(topBar[i]).empty().append($('<a href="#">').html(text + " " + descending_arrow));
+            $(row).append(`<td>---invalid label---</td>`);
         }
-
-        sortTableByColumn(i, ascending);
     });
 }
 
-$("#incomings_table tbody tr.nowrap").each((i, row) => {
-    const speed = re_speed.exec($(row).find("td:eq(0) img:eq(1)").attr("src"))[0].split('.')[0];
-    const distanceStr = $(row).find("td:eq(4)").text().trim();
-    const distance = parseFloat(distanceStr);
-    const arrival_time = $(row).find("td:eq(5)").text().trim();
-    const adjustedTime = subtractMinutes(parseArrivalTime(arrival_time), speeds[speed]*distance);
-    if (speed !== "undefined") {
-        $(row).append(`<td>${formatDate(adjustedTime)}</td>`);
-    } else {
-        $(row).append(`<td>---invalid label---</td>`);
-    }
-});
