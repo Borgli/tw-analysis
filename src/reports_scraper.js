@@ -302,6 +302,7 @@ async function getInfoForEachReport(data, reports) {
 		totalEndTime = performance.now();
 		console.log(`Total time: ${((totalEndTime - totalStartTime) / 1000).toFixed(0)} seconds`);
 	}
+	return data;
 }
 
 /* https://stackoverflow.com/a/18197341 */
@@ -323,7 +324,7 @@ function runScript() {
 	let reports = [];
 
 	getInfoForEachReport(data, reports).then(r => {
-		download("data.csv", data);
-		download("reports.json", JSON.stringify(reports));
+		download(`reports_short_${reports.length}.csv`, r);
+		download(`reports_full_${reports.length}.json`, JSON.stringify(reports));
 	});
 }
