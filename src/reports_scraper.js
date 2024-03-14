@@ -72,6 +72,23 @@ UI.promptErrorWithReloadOption = function(errorMessage) {
 	UI.ConfirmationBox(errorMessage, buttons, "errorReloadPrompt", true, true, false);
 };
 
+function createCopyButtons(buttonText, textToCopy) {
+	/* Add copy to clip board button */
+	return  button = $('<button/>', {
+    text: "Copy " + buttonText, // Button text
+		class: 'btn',
+		style: 'margin-left: 1px',
+    click: function() { // Button click handler
+      navigator.clipboard.writeText(textToCopy).then(function() {
+        console.log('Copying to clipboard was successful!');
+				UI.InfoMessage('Copied ' + buttonText + ' to clipboard.', 3000, 'success');
+      }, function(err) {
+        console.error('Could not copy text: ', err);
+      });
+    }
+  });
+}
+
 async function getInfoForEachReport(data, reports) {
 	const re_coord = /\d{1,3}\|\d{1,3}/g;
 
@@ -82,10 +99,10 @@ async function getInfoForEachReport(data, reports) {
 	let numberOfRows = $("#report_list > tbody > tr").not(":first").not(":last").get().length;
 
 	/* Add progress bar */
-	$("#content_value > h2").html('<div style="display: flex; align-items: center;">' +
+	$("#content_value > h2").html('<div id="infoBar" style="display: flex; align-items: center;">' +
 		'Reports - Scraping:' +
-		`<div style="margin-left: 10px; width: 360px" class="progress-bar" id="progress-bar">\n` +
-		'     <span class="label" style="width: 360px" id="progress"></span>\n' +
+		`<div style="margin-left: 10px; margin-right: 5px; width: 344px" class="progress-bar" id="progress-bar">\n` +
+		'     <span class="label" style="width: 344px" id="progress"></span>\n' +
 		`     <div style="width: 0%;"></div>\n` +
 		'</div></div>');
 
@@ -93,6 +110,9 @@ async function getInfoForEachReport(data, reports) {
 
 	const progressText = $('#progress-bar > div > span');
 	$(progressText).html(`${$(progressText).html()} -> ~${(numberOfRows * 0.2).toFixed(0)} seconds left`);
+	let $infoBar = $("#infoBar");
+	$infoBar.append(createCopyButtons('full reports', localStorage.getItem('reports_full')));
+	$infoBar.append(createCopyButtons('short reports', localStorage.getItem('reports_short')));
 
 	if (!$($pagination).attr('class')) {
 		/* Pagination exists because class attribute is not set */
@@ -127,9 +147,13 @@ async function getInfoForEachReport(data, reports) {
 			$("#progress").html(`${Format.number(rowNumber)} / ${Format.number(numberOfRows)} -> ~${timeLeft} seconds left`);
 			$(progressText).html(`${$(progressText).html()} -> ~${timeLeft} seconds left`);
 			rowNumber += 1;
-            startTime = performance.now();
-
 			const row = rows[i];
+			const reportID = $(row).attr('class').split('-')[1];
+			if (reports.find((report) => reportID === report['ID'])) {
+				continue;
+			}
+
+			startTime = performance.now();
 			let description = $(row).find("td:eq(1) .quickedit-label").text();
 			let attacker = description.split('(')[0].trim();
 			let coords = description.match(re_coord);
@@ -256,6 +280,7 @@ async function getInfoForEachReport(data, reports) {
 
 					/* Extract report data */
 					let report_details = {
+						"ID": reportID,
 						"Subject": $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(1) > th:nth-child(2)").text().trim(),
 						"Battle time": arrival_time,
 						"Title": $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(3) > td > h3").text().trim(),
@@ -288,6 +313,8 @@ async function getInfoForEachReport(data, reports) {
 				}).then(() => {
 						data += `${attacker},${origin},${target},${arrival_time},${speed},${is_fake}\n`;
 						console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, speed: ${speed}, is fake: ${is_fake}`);
+						localStorage.setItem('reports_short', data);
+						localStorage.setItem('reports_full', JSON.stringify(reports));
 						resolve();
 					}
 				);
@@ -320,8 +347,10 @@ function download(filename, text) {
 }
 
 function runScript() {
-	let data = "attacker,origin,target,arrival_time,speed,fake\n";
-	let reports = [];
+	let data = localStorage.getItem('reports_short');
+	data = data ? data : "attacker,origin,target,arrival_time,speed,fake\n";
+	let reports = localStorage.getItem('reports_full');
+	reports = reports ? JSON.parse(reports) : [];
 
 	getInfoForEachReport(data, reports).then(r => {
 		download(`reports_short_${reports.length}.csv`, r);
