@@ -57,7 +57,7 @@ UI.reloadPage = function() {
 };
 
 UI.promptErrorWithReloadOption = function(errorMessage) {
-	var buttons = [
+	let buttons = [
 		{
 			text: "Reload", // The text displayed on the reload button
 			callback: UI.reloadPage, // The function to call when the button is clicked
@@ -168,7 +168,12 @@ async function getInfoForEachReport(data, reports) {
 					const $report = $(data);
 					let $arrival_time = $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(2)");
 					arrival_time = $arrival_time.text().trim();
-					arrival_time = parseDate(arrival_time);
+					try {
+						arrival_time = parseDate(arrival_time);
+					} catch (e) {
+						UI.promptErrorWithReloadOption("Report is not parseable. \nIt is likely that the bot protection is triggered.\nReload the page and try to run the script again.");
+					}
+
 
 					let attackers = []
 					$report.find("#attack_info_att_units > tbody > tr:nth-child(2) > td.unit-item").each(
