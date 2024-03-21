@@ -105,36 +105,66 @@ function sortTableByColumn(columnIndex, ascending = true) {
   $bottom.appendTo($tbody);
 }
 
-function registerSorters(currentColumn, ascending) {
-  const descending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_s.png" class="" data-title="Distance">';
-  const ascending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_n.png" class="" data-title="Distance">';
-
-}
-
 function addFakeColumn(data) {
   $("#incomings_table > tbody > tr:nth-child(1)").append("<th><a href='#'>Fake</a></th>").attr("width", "*");
   $("#incomings_table tbody tr:last-child th:nth-child(2)").attr("colspan", 8);
 
   $("#incomings_table tbody tr.nowrap").each((i, row) => {
-    $(row).append(`<td>${data[i]['predictions'] === 1}</td>`)
+    $(row).append(`<td>${data[i]['predictions'] === 1}</td>`);
+  });
+
+  // Add event listener for sorting by the fake column
+  $("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(9)").click(function(e) {
+    e.preventDefault();
+    const topBar = $("#incomings_table > tbody > tr:nth-child(1) > th").get();
+    let table = $("#incomings_table");
+    let currentColumn = table.data("currentColumn");
+    let ascending = table.data("ascending");
+    let i = 8;
+
+    /* If we click the same column we want the sorting to reverse, else we change to the new column */
+    if (i === currentColumn) {
+      ascending = !ascending;
+    } else {
+      $(topBar[currentColumn]).removeAttr('class');
+      let text = $(topBar[currentColumn]).find('a').text();
+      $(topBar[currentColumn]).empty().append($('<a href="#">').html(text));
+      if (currentColumn === 5) {
+        $(topBar[currentColumn + 1]).removeAttr('class');
+      }
+      currentColumn = i;
+      ascending = true;
+      $(topBar[currentColumn]).attr('class', 'selected');
+      if (currentColumn === 5) {
+        $(topBar[currentColumn + 1]).attr('class', 'selected');
+      }
+    }
+
+    let text = $(topBar[i]).find('a').text();
+    if (ascending) {
+      $(topBar[i]).empty().append($('<a href="#">').html(text + " " + table.data('ascendingArrow')));
+    } else {
+      $(topBar[i]).empty().append($('<a href="#">').html(text + " " + table.data('descendingArrow')));
+    }
+
+    table.data("currentColumn", currentColumn);
+    table.data("ascending", ascending);
+
+    sortTableByColumn(currentColumn, ascending);
   });
 }
 
 function createLoadPredictionsButton(buttonText) {
-  // Create the file input element programmatically
-  var fileInput = $('<input/>', {
+  let fileInput = $('<input/>', {
     type: 'file',
-    style: 'display: none;', // Hide the file input
-    accept: '.json', // Accept only JSON files
+    style: 'display: none;',
+    accept: '.json',
     change: function(e) {
-      // Get the selected file
-      var file = e.target.files[0];
+      let file = e.target.files[0];
       if (file) {
-        // Create a FileReader to read the file
-        var reader = new FileReader();
+        let reader = new FileReader();
         reader.onload = function(e) {
-          // Parse the file content to JSON
-          var data;
+          let data;
           try {
             data = JSON.parse(e.target.result);
             console.log('Loaded JSON Data:', data);
@@ -143,22 +173,19 @@ function createLoadPredictionsButton(buttonText) {
             console.error('Error parsing JSON:', error);
           }
         };
-        // Read the file as text
         reader.readAsText(file);
       }
     }
   });
 
-  // Append the file input to the body or another element to include it in the document
   $('body').append(fileInput);
 
-  // Return a button that, when clicked, triggers the file input
   return $('<button/>', {
-    text: buttonText, // Button text
+    text: buttonText,
     class: 'btn',
     style: 'margin-left: 1px',
     click: function() {
-      fileInput.click(); // Trigger the hidden file input
+      fileInput.click();
     }
   });
 }
@@ -180,29 +207,38 @@ function runScript() {
     "snob": 35
   };
 
-  $("#paged_view_content > a").wrap('<div id="buttonBar"></div>')
-  $("#buttonBar").append(createLoadPredictionsButton('Add predictions'))
+  $("#paged_view_content > a").wrap('<div id="buttonBar"></div>');
+  $("#buttonBar").append(createLoadPredictionsButton('Add predictions'));
 
   $("#incomings_table > tbody > tr:nth-child(1)").append("<th><a href='#'>Sent time</a></th>").attr("width", "*");
   $("#incomings_table tbody tr:last-child th:nth-child(2)").attr("colspan", 7);
 
-  let currentColumn = 5;
-  let ascending = true;
-  const descending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_s.png" class="" data-title="Distance">';
-  const ascending_arrow = '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_n.png" class="" data-title="Distance">';
+  let table = $("#incomings_table");
+  table.data("currentColumn", 5);
+  table.data("ascending", true);
 
-  $("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(6)").html('<a href="#">Arrives in ' + ascending_arrow + '</a>').attr('class', 'selected');
+  table.data("descendingArrow", '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_s.png" class="" data-title="Distance">');
+  table.data("ascendingArrow", '<img src="https://dsen.innogamescdn.com/asset/9900b900/graphic/map/map_n.png" class="" data-title="Distance">');
+
+  $("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(6)").html('<a href="#">Arrives in ' + table.data('ascendingArrow') + '</a>').attr('class', 'selected');
   $("#incomings_table > tbody > tr:nth-child(1) > th:nth-child(7)").attr('class', 'selected');
 
-  const topBar = $("#incomings_table > tbody > tr:nth-child(1) > th").get();
+  let topBar = $("#incomings_table > tbody > tr:nth-child(1) > th").get();
   for (let i = 1; i < topBar.length; i++) {
     $(topBar[i]).find('a').attr('href', '#');
 
     $(topBar[i]).on('click', (e) => {
       e.preventDefault();
+      topBar = $("#incomings_table > tbody > tr:nth-child(1) > th").get();
+      let currentColumn = table.data("currentColumn");
+      let ascending = table.data("ascending");
+
+      /* If the column is Arrival In, we sort it together with Arrival Time */
       if (i === 6) {
         i = 5;
       }
+
+      /* If we click the same column we want the sorting to reverse, else we change to the new column */
       if (i === currentColumn) {
         ascending = !ascending;
       } else {
@@ -222,10 +258,13 @@ function runScript() {
 
       let text = $(topBar[i]).find('a').text();
       if (ascending) {
-        $(topBar[i]).empty().append($('<a href="#">').html(text + " " + ascending_arrow));
+        $(topBar[i]).empty().append($('<a href="#">').html(text + " " + table.data('ascendingArrow')));
       } else {
-        $(topBar[i]).empty().append($('<a href="#">').html(text + " " + descending_arrow));
+        $(topBar[i]).empty().append($('<a href="#">').html(text + " " + table.data('descendingArrow')));
       }
+
+      table.data("currentColumn", currentColumn);
+      table.data("ascending", ascending);
 
       sortTableByColumn(i, ascending);
     });
