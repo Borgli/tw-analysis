@@ -170,6 +170,9 @@ async function getInfoForEachReport(data, reports) {
 					arrival_time = $arrival_time.text().trim();
 					try {
 						arrival_time = parseDate(arrival_time);
+						if (!arrival_time) {
+							UI.promptErrorWithReloadOption("Report is not parseable. \nIt is likely that the bot protection is triggered.\nReload the page and try to run the script again.");
+						}
 					} catch (e) {
 						UI.promptErrorWithReloadOption("Report is not parseable. \nIt is likely that the bot protection is triggered.\nReload the page and try to run the script again.");
 					}
