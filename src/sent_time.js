@@ -110,7 +110,7 @@ function addFakeColumn(data) {
   $("#incomings_table tbody tr:last-child th:nth-child(2)").attr("colspan", 8);
 
   $("#incomings_table tbody tr.nowrap").each((i, row) => {
-    $(row).append(`<td>${data[i]['predictions'] === 1}</td>`);
+    $(row).append(`<td style="font-weight: 700; text-decoration: none; color: #603000">${data[i]['predictions'] === 1}</td>`);
   });
 
   // Add event listener for sorting by the fake column
