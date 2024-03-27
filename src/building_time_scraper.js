@@ -241,6 +241,6 @@ function runScript() {
 	let villages = localStorage.getItem('villages_building_times');
 	villages = villages ? JSON.parse(villages) : [];
 	getBuildingTimeForEachVillage(villages).then(r => {
-		download(`building_times`, JSON.stringify(r));
+		download(`building_times.json`, JSON.stringify(r));
 	});
 }
