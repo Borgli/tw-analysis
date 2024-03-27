@@ -13,6 +13,10 @@ if ($("#incomings_table > tbody > tr:nth-child(1)").text().includes("Sent time")
   UI.InfoMessage('Sent time script loaded.', 3000, 'success');
 }
 
+function calculateDistance(x1, y1, x2, y2) {
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+
 function parseArrivalTime(timeStr) {
   const now = new Date();
   let datePart;
@@ -192,6 +196,7 @@ function createLoadPredictionsButton(buttonText) {
 
 function runScript() {
   const re_speed = /([^\/]+)$/;
+  const re_coord = /\d{1,3}\|\d{1,3}/;
   const speeds = {
     "spear": 18,
     "sword": 22,
@@ -272,8 +277,11 @@ function runScript() {
 
   $("#incomings_table tbody tr.nowrap").each((i, row) => {
     const speed = re_speed.exec($(row).find("td:eq(0) img:eq(1)").attr("src"))[0].split('.')[0];
-    const distanceStr = $(row).find("td:eq(4)").text().trim();
-    const distance = parseFloat(distanceStr);
+    let origin = re_coord.exec($(row).find("td:eq(2)").text())[0].trim().split('|');
+    let target = re_coord.exec($(row).find("td:eq(1)").text())[0].trim().split('|');
+    const distance = calculateDistance(origin[0], origin[1], target[0], target[1]);
+    //const distanceStr = $(row).find("td:eq(4)").text().trim();
+    //const distance = parseFloat(distanceStr);
     const arrival_time = $(row).find("td:eq(5)").text().trim();
     const adjustedTime = subtractMinutes(parseArrivalTime(arrival_time), speeds[speed]*distance);
     if (speed !== "undefined") {

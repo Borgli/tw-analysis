@@ -8,10 +8,10 @@ if (!(game_data.screen === 'overview_villages' && document.location.search.inclu
 	throw new Error("Wrong page");
 }
 
-const re_speed = /([^\/]+)$/
-const re_coord = /\d{1,3}\|\d{1,3}/
+const re_speed = /([^\/]+)$/;
+const re_coord = /\d{1,3}\|\d{1,3}/;
 
-let data = "attacker,origin,target,arrival_time,speed\n"
+let data = "attacker,origin,target,arrival_time,sent_time,distance,speed\n";
 
 const speeds = {
 	"spear": 18,
@@ -22,11 +22,11 @@ const speeds = {
 	"light": 10,
 	"marcher": 10,
 	"heavy": 11,
-  "ram": 30,
+  	"ram": 30,
 	"catapult": 30,
 	"knight": 10,
-  "snob": 35
-}
+  	"snob": 35
+};
 
 function parseArrivalTime(timeStr) {
     const now = new Date();
@@ -58,30 +58,42 @@ function parseArrivalTime(timeStr) {
     }
 }
 
+function subtractMinutes(date, minutes) {
+  const milliseconds = minutes * 60 * 1000;
+  return new Date(date.getTime() - milliseconds);
+}
+
+function calculateDistance(x1, y1, x2, y2) {
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+
 function fixLocale(parsed_date) {
 	let current_date = new Date();
 	// datestr is in UTC, but date is in local, so we need to adjust for timezone
-	parsed_date.setMinutes(parsed_date.getMinutes() - parsed_date.getTimezoneOffset())
+	parsed_date.setMinutes(parsed_date.getMinutes() - parsed_date.getTimezoneOffset());
 
 	if (parsed_date < current_date) {
 		parsed_date.setFullYear(current_date.getFullYear())
 	}
 	// ISO-string prints it as UTC
-    return parsed_date.toISOString();
+    return parsed_date.toISOString().replace('Z', '000+00:00');
 }
 
 $("#incomings_table tbody tr.nowrap").each(
 	(i, row) => {
-		let attacker = $(row).find("td:eq(3)").text().trim()
-		let origin = re_coord.exec($(row).find("td:eq(2)").text())[0]
-		let target = re_coord.exec($(row).find("td:eq(1)").text())[0]
-		let speed = re_speed.exec($(row).find("td:eq(0) img:eq(1)").attr("src"))[0].split('.')[0]
-		speed = speeds[speed]
-		let arrival_time = $(row).find("td:eq(5)").text().trim()
-		arrival_time = parseArrivalTime(arrival_time)
-		arrival_time = fixLocale(arrival_time)
-		data += `${attacker},${origin},${target},${arrival_time},${speed}\n`
-		console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, speed: ${speed}`)
+		let attacker = $(row).find("td:eq(3)").text().trim();
+		let origin = re_coord.exec($(row).find("td:eq(2)").text())[0];
+		let target = re_coord.exec($(row).find("td:eq(1)").text())[0];
+		let distance = calculateDistance(...origin.trim().split('|'), ...target.trim().split('|'));
+		let speed = re_speed.exec($(row).find("td:eq(0) img:eq(1)").attr("src"))[0].split('.')[0];
+		speed = speeds[speed];
+		let arrival_time = $(row).find("td:eq(5)").text().trim();
+		arrival_time = parseArrivalTime(arrival_time);
+		let sent_time = subtractMinutes(arrival_time, speed*distance);
+		sent_time = fixLocale(sent_time);
+		arrival_time = fixLocale(arrival_time);
+		data += `${attacker},${origin},${target},${arrival_time},${sent_time},${distance},${speed}\n`;
+		console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, sent time: ${sent_time}, distance: ${distance}, speed: ${speed}`);
 		//data += `${speed},${destination},${origin},${player},${distance},${arrival_time}\n`
 		//console.log(`speed: ${speed}, dest: ${destination}, origin: ${origin}, player: ${player}, distance: ${distance}, arrival time: ${arrival_time}`)
 	}
@@ -101,5 +113,5 @@ function download(filename, text) {
 	document.body.removeChild(element);
 }
 
-download("data.csv", data)
+download("data.csv", data);
 

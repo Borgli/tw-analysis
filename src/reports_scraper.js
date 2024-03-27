@@ -16,17 +16,22 @@ if ($("#content_value > h2").text().includes("Scraping")) {
 	UI.InfoMessage('Reports scraping script loaded.', 3000, 'success');
 }
 
-function parseDate(dateStr) {
+function fixLocale(parsed_date) {
 	let current_date = new Date();
-	let parsed_date = new Date(dateStr);
-	/* datestr is in UTC, but date is in local, so we need to adjust for timezone */
+	// datestr is in UTC, but date is in local, so we need to adjust for timezone
 	parsed_date.setMinutes(parsed_date.getMinutes() - parsed_date.getTimezoneOffset());
 
 	if (parsed_date < current_date) {
-		parsed_date.setFullYear(current_date.getFullYear());
+		parsed_date.setFullYear(current_date.getFullYear())
 	}
-
-	return parsed_date.toISOString();
+	let dateString;
+	// ISO-string prints it as UTC
+	try {
+		 dateString = parsed_date.toISOString().replace('Z', '000+00:00');
+	} catch (e) {
+		UI.promptErrorWithReloadOption("Report is not parseable. \nIt is likely that the bot protection is triggered.\nReload the page and try to run the script again.");
+	}
+    return dateString;
 }
 
 function findSpeed(attackers) {
@@ -46,6 +51,15 @@ function findSpeed(attackers) {
 	};
 	let activeAttackers = Object.values(speeds).filter((_, index) => attackers[index]);
 	return activeAttackers.sort()[0];
+}
+
+function subtractMinutes(date, minutes) {
+  const milliseconds = minutes * 60 * 1000;
+  return new Date(date.getTime() - milliseconds);
+}
+
+function calculateDistance(x1, y1, x2, y2) {
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
 function delay(time) {
@@ -70,6 +84,7 @@ UI.promptErrorWithReloadOption = function(errorMessage) {
 	// The ID for this confirmation box could be something unique for the error prompt
 	// 'false' for hiding other buttons, 'true' to act as a modal dialog, and the last 'true' to check for confirmation skipping
 	UI.ConfirmationBox(errorMessage, buttons, "errorReloadPrompt", true, true, false);
+	throw Error('Script needs to reload.');
 };
 
 function createCopyButtons(buttonText, textToCopy) {
@@ -159,24 +174,25 @@ async function getInfoForEachReport(data, reports) {
 			let coords = description.match(re_coord);
 			let origin = coords[0];
 			let target = coords[1];
+			let distance = calculateDistance(...origin.trim().split('|'), ...target.trim().split('|'));
 			let is_fake = $(row).find("td:eq(1) img").attr("src").includes("attack_small");
 
 			let speed = 0;
 			let arrival_time;
+			let sent_time;
 			await new Promise(resolve => {
 				$.get($(row).find("td:nth-child(2) > span.quickedit.report-title > span > a.report-link").attr("href"), (data) => {
 					const $report = $(data);
 					let $arrival_time = $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(2)");
 					arrival_time = $arrival_time.text().trim();
 					try {
-						arrival_time = parseDate(arrival_time);
+						arrival_time = new Date(arrival_time);
 						if (!arrival_time) {
 							UI.promptErrorWithReloadOption("Report is not parseable. \nIt is likely that the bot protection is triggered.\nReload the page and try to run the script again.");
 						}
 					} catch (e) {
 						UI.promptErrorWithReloadOption("Report is not parseable. \nIt is likely that the bot protection is triggered.\nReload the page and try to run the script again.");
 					}
-
 
 					let attackers = []
 					$report.find("#attack_info_att_units > tbody > tr:nth-child(2) > td.unit-item").each(
@@ -285,6 +301,11 @@ async function getInfoForEachReport(data, reports) {
 							);
 						}
 					}
+					speed = findSpeed(attackers);
+
+					sent_time = subtractMinutes(arrival_time, speed*distance);
+					sent_time = fixLocale(sent_time);
+					arrival_time = fixLocale(arrival_time);
 
 					/* Extract report data */
 					let report_details = {
@@ -292,6 +313,9 @@ async function getInfoForEachReport(data, reports) {
 						"Subject": $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(1) > th:nth-child(2)").text().trim(),
 						"Battle time": arrival_time,
 						"Title": $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(3) > td > h3").text().trim(),
+						"Speed": speed,
+						"Distance": distance,
+						"Sent Time": sent_time,
 						"Attack Luck": luck,
 						"Morale": $report.find("#content_value > table > tbody > tr > td:nth-child(2) > table > tbody > tr > td > table:nth-child(2) > tbody > tr:nth-child(3) > td > div.report_image > div > h4:nth-child(3)").text().trim().slice(8),
 						"Attacker": $report.find("#attack_info_att > tbody > tr:nth-child(1) > th:nth-child(2) > a").text().trim(),
@@ -314,13 +338,12 @@ async function getInfoForEachReport(data, reports) {
 					if (is_fake && attackers[9] > 50) {
 						is_fake = false;
 					}
-					speed = findSpeed(attackers);
 
 				}).fail(() => {
 					UI.promptErrorWithReloadOption("Could not load the report.\nIs bot protection triggered? Is the internet connection broken?\nReload the page and try to run the script again.");
 				}).then(() => {
-						data += `${attacker},${origin},${target},${arrival_time},${speed},${is_fake}\n`;
-						console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, speed: ${speed}, is fake: ${is_fake}`);
+						data += `${attacker},${origin},${target},${arrival_time},${sent_time},${distance},${speed},${is_fake}\n`;
+						console.log(`attacker: ${attacker}, origin: ${origin}, target: ${target}, arrival time: ${arrival_time}, sent time: ${sent_time}, distance: ${distance}, speed: ${speed}, is fake: ${is_fake}`);
 						localStorage.setItem('reports_short', data);
 						localStorage.setItem('reports_full', JSON.stringify(reports));
 						resolve();
@@ -356,7 +379,7 @@ function download(filename, text) {
 
 function runScript() {
 	let data = localStorage.getItem('reports_short');
-	data = data ? data : "attacker,origin,target,arrival_time,speed,fake\n";
+	data = data ? data : "attacker,origin,target,arrival_time,sent_time,distance,speed,fake\n";
 	let reports = localStorage.getItem('reports_full');
 	reports = reports ? JSON.parse(reports) : [];
 
