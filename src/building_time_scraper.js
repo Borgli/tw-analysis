@@ -131,19 +131,14 @@ async function getBuildingTimeForEachVillage(villages) {
 
 		const row = rows[i];
 		const villageID = $(row).find("td.nowrap > span").attr('data-id');
-		if (villages.find((villages) => villageID === villages['ID'])) {
-			continue;
-		}
 
-		console.log(villageID);
-		console.log($(row).find("td.nowrap > span > span > a:nth-child(1)").attr('href'));
-		console.log()
+		//console.log(villageID);
+		//console.log($(row).find("td.nowrap > span > span > a:nth-child(1)").attr('href'));
 
 		startTime = performance.now();
 		await new Promise(resolve => {
 			$.get($(row).find("td.nowrap > span > span > a:nth-child(1)").attr('href'), (data) => {
 				const $buildingPage = $(data);
-
 				let villageBuildQueue = [];
 				const buildQueue = $buildingPage.find('#buildqueue > tr.sortable_row').get();
 				let buildingShortName;
@@ -166,11 +161,8 @@ async function getBuildingTimeForEachVillage(villages) {
 					villageBuildQueue.push(buildingInfo);
 				})
 
-
+				const villageBuildings = {villageBuildQueue};
 				const buildings = $buildingPage.find("#buildings > tbody > tr").not(":first").get();
-
-				const villageBuildings = {villageBuildQueue}
-
 				for (let j = 0; j < buildings.length; j++) {
 					const building = buildings[j];
 					console.log(building);
@@ -184,12 +176,31 @@ async function getBuildingTimeForEachVillage(villages) {
 					}
 					let buildingNextLevel = $(building).find('td:nth-child(7) > a.btn-build').text();
 					let buildingTime = $(building).find('td:nth-child(5)').text();
+
+					// Check if being currently built or not
+					let currentlyBuilding = $buildingPage.find('#buildqueue > tr:nth-child(2)');
+					if (currentlyBuilding.length) {
+						let currentlyBuildingShortName = $(currentlyBuilding).attr('class').replace('lit nodrag buildorder_', '');
+						if (currentlyBuildingShortName === buildingShortName) {
+							buildingCurrentLevel++;
+							buildingNextLevel++;
+						}
+					}
+
+					villageBuildQueue.forEach((building) => {
+						let buildingQueueName = Object.keys(building)[0];
+						if (buildingQueueName === buildingShortName) {
+							buildingCurrentLevel++;
+							buildingNextLevel++;
+						}
+					})
+
 					villageBuildings[buildingShortName] = {
 						'Building Name': buildingName,
 						'Building Current Level': buildingCurrentLevel,
 						'Building Next Level': buildingNextLevel,
 						'Building Time': buildingTime
-					}
+					};
 					console.log(villageBuildings);
 				}
 
@@ -205,7 +216,7 @@ async function getBuildingTimeForEachVillage(villages) {
 			}).fail(() => {
 				UI.promptErrorWithReloadOption("Could not load the report.\nIs bot protection triggered? Is the internet connection broken?\nReload the page and try to run the script again.");
 			}).then(() => {
-					localStorage.setItem('villages_building_times', JSON.stringify(villages));
+					//localStorage.setItem('villages_building_times', JSON.stringify(villages));
 					resolve();
 				}
 			);
@@ -237,10 +248,69 @@ function download(filename, text) {
 	document.body.removeChild(element);
 }
 
+function getKnownBuildTimes(villages) {
+  let emptyknownBuildTimes = {
+    'main': Array.from({length: 30}, () => Array.from({length: 30}, () => [])),
+    'barracks': Array.from({length: 25}, () => Array.from({length: 30}, () => [])),
+    'stable': Array.from({length: 20}, () => Array.from({length: 30}, () => [])),
+    'garage': Array.from({length: 15}, () => Array.from({length: 30}, () => [])),
+    'snob': Array.from({length: 3}, () => Array.from({length: 30}, () => [])),
+    'smith': Array.from({length: 20}, () => Array.from({length: 30}, () => [])),
+    'place': Array.from({length: 1}, () => Array.from({length: 30}, () => [])),
+    'statue': Array.from({length: 1}, () => Array.from({length: 30}, () => [])),
+    'market': Array.from({length: 25}, () => Array.from({length: 30}, () => [])),
+    'wood': Array.from({length: 30}, () => Array.from({length: 30}, () => [])),
+    'stone': Array.from({length: 30}, () => Array.from({length: 30}, () => [])),
+    'iron': Array.from({length: 30}, () => Array.from({length: 30}, () => [])),
+    'farm': Array.from({length: 30}, () => Array.from({length: 30}, () => [])),
+    'storage': Array.from({length: 30}, () => Array.from({length: 30}, () => [])),
+    'hide': Array.from({length: 10}, () => Array.from({length: 30}, () => [])),
+    'wall': Array.from({length: 20}, () => Array.from({length: 30}, () => [])),
+  };
+
+	let knownBuildTimes = localStorage.getItem('knownBuildTimes');
+	knownBuildTimes = knownBuildTimes ? JSON.parse(knownBuildTimes) : emptyknownBuildTimes;
+
+  villages.forEach((village) => {
+    let villageID = village['ID'];
+    village = village['villageBuildings'];
+    let HQLevel = village['main']['Building Current Level'];
+    for (const [key, value] of Object.entries(village)) {
+      let level;
+      let buildTime;
+      let buildingName;
+      if (key === "villageBuildQueue") {
+        village[key].forEach((building) => {
+          buildingName = Object.keys(building)[0];
+          level = building[buildingName]['Building Level'] - 1;
+          buildTime = building[buildingName]['Building Time'];
+        });
+      } else {
+        buildingName = key;
+        level = village[buildingName]['Building Current Level'];
+        buildTime = village[buildingName]['Building Time'];
+      }
+      if (buildTime && level < knownBuildTimes[buildingName].length) {
+        if (!knownBuildTimes[buildingName][level][HQLevel - 1].some((item) => item[0] === buildTime)) {
+					if (knownBuildTimes[buildingName][level][HQLevel - 1].length > 0) {
+						/* There's already a different unique entry, and we need to figure out of a boost is active */
+
+					}
+          knownBuildTimes[buildingName][level][HQLevel - 1].push([buildTime, level, HQLevel, parseInt(villageID)]);
+        }
+      }
+    }
+  });
+
+	localStorage.setItem('knownBuildTimes', JSON.stringify(knownBuildTimes));
+  return knownBuildTimes;
+}
+
 function runScript() {
-	let villages = localStorage.getItem('villages_building_times');
-	villages = villages ? JSON.parse(villages) : [];
-	getBuildingTimeForEachVillage(villages).then(r => {
+	//let villages = localStorage.getItem('villages_building_times');
+	//villages = villages ? JSON.parse(villages) : [];
+	getBuildingTimeForEachVillage([]).then(r => {
+		download(`known_build_times.json`, JSON.stringify(getKnownBuildTimes(r)));
 		download(`building_times.json`, JSON.stringify(r));
 	});
 }
